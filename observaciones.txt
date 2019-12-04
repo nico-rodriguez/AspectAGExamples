@@ -23,3 +23,5 @@ la extensión NoMonomorphismRestriction, pero el error no lo dice.
 -- Hay varios combinadores de reglas para generar aspectos: syn / syndef / syndefM, etc.
 
 -- Interfaz para agregar símbolos no terminales dentro de una lista en lugar de uno por uno.
+
+-- No se acepta duplicados de nombres de hijos aunque sean de padres diferentes. Por ejemplo, en la gramática
