@@ -21,6 +21,7 @@ import Data.Maybe (fromJust)
 import Language.Grammars.AspectAG
 import Language.Grammars.AspectAG.TH
 import Prelude (String, ($), (<*>), (<$>), Eq, Read, Show, show, (++), error, (==))
+import GHC.Unicode
 
 -- Modelar el cálculo lambda polimórifco (System F).
 -- Lenguaje de términos:
@@ -78,7 +79,7 @@ $(closeNTs [''Nt_Ty, ''Nt_Term])
 type Context = Map Variable Ty
 type ContextTypes = Set TypeVariable
 
-$(attLabels [("eval", ''Ty), ("ctx", ''Context), ("ctx_var", ''ContextTypes)])
+$(attLabels [("eval", ''Ty), ("ctx", ''Context), ("ctx_var", ''ContextTypes), ("sshow", ''String)])
 
 eval_var = syndefM eval p_Var (slookup <$> ter ch_var <*> at lhs ctx)
   where slookup n m = fromJust $ Data.Map.lookup n m
@@ -126,12 +127,40 @@ ctx_var_univTyTy  = inhdefM ctx_var p_UnivTy ch_univTyTy (at lhs ctx_var)
 asp_ctx_var = ctx_var_abs .+: ctx_var_absVarType .+: ctx_var_appFun .+: ctx_var_appArg .+: ctx_var_tyAbs .+: ctx_var_tyApp .+: ctx_var_tyAppTy .+:
   ctx_var_appArgTy .+: ctx_var_appResTy .+: ctx_var_univTyTy .+: emptyAspect
 
+
+arrow = " -> "-- '→'
+forAll = "V "--'∀'
+absType = "A "--'∧'
+dot = " . "
+sshow_var = syndefM sshow p_Var (ter ch_var)
+sshow_abs = syndefM sshow p_Abs (showAbs <$> ter ch_absVar <*> at ch_absVarType sshow <*> at ch_absExpr sshow)
+  where showAbs sAbsVar sAvsVarType sAbsExpr = sAbsVar ++ "^" ++ sAvsVarType ++ arrow ++ sAbsExpr
+sshow_app = syndefM sshow p_App (showApp <$> at ch_appFun sshow <*> at ch_appArg sshow)
+  where showApp sAppFun sAppArg = "(" ++ sAppFun ++ ") " ++ sAppArg
+sshow_tyAbs = syndefM sshow p_TyAbs (showTyAbs <$> ter ch_tyAbsTyVar <*> at ch_tyAbsTerm sshow)
+  where showTyAbs sTyAbsTyVar sTyAbsTerm = absType ++ sTyAbsTyVar ++ dot ++ sTyAbsTerm
+sshow_tyApp = syndefM sshow p_TyApp (showTyApp <$> at ch_tyAppTerm sshow <*> at ch_tyAppTy sshow)
+  where showTyApp sTyAppTerm sTyAppTy = "(" ++ sTyAppTerm ++ ") " ++ sTyAppTy
+
+sshow_constTy = syndefM sshow p_ConstTy (show <$> ter ch_constTy)
+sshow_varTy   = syndefM sshow p_VarTy (ter ch_varTy)
+sshow_appTy   = syndefM sshow p_AppTy (showAppTy <$> at ch_appArgTy sshow <*> at ch_appResTy sshow)
+  where showAppTy sAppArgTy sAppResTy = sAppArgTy ++ arrow ++ sAppResTy
+sshow_univTy  = syndefM sshow p_UnivTy (showUnivTy <$> ter ch_univTyVar <*> at ch_univTyTy sshow)
+  where showUnivTy sUnivTyVar sUnivTyTy = forAll ++ sUnivTyVar ++ dot ++ sUnivTyTy
+asp_type_sshow = sshow_constTy .+: sshow_varTy .+: sshow_appTy .+: sshow_univTy .+: emptyAspect
+asp_sshow = sshow_var .+: sshow_abs .+: sshow_app .+: sshow_tyAbs .+: sshow_tyApp .+: asp_type_sshow
+
 asp_all = asp_eval .:+: asp_ctx_var .:+: asp_ctx
 
 $(mkSemFunc ''Nt_Ty)
 $(mkSemFunc ''Nt_Term)
 
 evalTerm term context = sem_Term asp_all term ( (ctx =. context) .*. (ctx_var =. (Data.Set.empty::ContextTypes)) .*. emptyAtt ) #. eval
+
+showTerm term context = (sem_Term asp_sshow term emptyAtt #. sshow)
+showType term context = sem_Ty asp_type_sshow (evalTerm term context) emptyAtt #. sshow
+showTermAndType term context = (showTerm term context) ++ " : " ++ (showType term context)
 
 -- Ejemplos:
 
