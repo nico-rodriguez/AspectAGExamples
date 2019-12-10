@@ -53,7 +53,7 @@ $(closeNTs [''Nt_Ty, ''Nt_Term])
 
 type Context = Map Variable Ty
 
-$(attLabels [("eval", ''Ty), ("ctx", ''Context)])
+$(attLabels [("eval", ''Ty), ("ctx", ''Context), ("sshow", ''String)])
 
 eval_var = syndefM eval p_Var (slookup <$> ter ch_var <*> at lhs ctx)
   where slookup n m = fromJust $ Data.Map.lookup n m
@@ -71,12 +71,32 @@ ctx_appFun = inhdefM ctx p_App ch_appFun (at lhs ctx)
 ctx_appArg = inhdefM ctx p_App ch_appArg (at lhs ctx)
 asp_ctx = ctx_abs .+: ctx_appFun .+: ctx_appArg .+: emptyAspect
 
+arrow = " -> "-- '→'
+forAll = "V "--'∀'
+absType = "A "--'∧'
+dot = " . "
+sshow_var = syndefM sshow p_Var (ter ch_var)
+sshow_abs = syndefM sshow p_Abs (showAbs <$> ter ch_absVar <*> at ch_absVarType sshow <*> at ch_absExpr sshow)
+  where showAbs sAbsVar sAvsVarType sAbsExpr = sAbsVar ++ "^" ++ sAvsVarType ++ arrow ++ sAbsExpr
+sshow_app = syndefM sshow p_App (showApp <$> at ch_appFun sshow <*> at ch_appArg sshow)
+  where showApp sAppFun sAppArg = "(" ++ sAppFun ++ ") " ++ sAppArg
+
+sshow_constTy = syndefM sshow p_ConstTy (show <$> ter ch_const)
+sshow_appTy   = syndefM sshow p_AppTy (showAppTy <$> at ch_appArgTy sshow <*> at ch_appResTy sshow)
+  where showAppTy sAppArgTy sAppResTy = sAppArgTy ++ arrow ++ sAppResTy
+asp_type_sshow = sshow_constTy .+: sshow_appTy .+: emptyAspect
+asp_sshow = sshow_var .+: sshow_abs .+: sshow_app .+: asp_type_sshow
+
 asp_all = asp_eval .:+: asp_ctx
 
 $(mkSemFunc ''Nt_Ty)
 $(mkSemFunc ''Nt_Term)
 
 evalTerm term context = sem_Term asp_all term (ctx =. context .*. emptyAtt) #. eval
+
+showTerm term = (sem_Term asp_sshow term emptyAtt #. sshow)
+showType term context = sem_Ty asp_type_sshow (evalTerm term context) emptyAtt #. sshow
+showTermAndType term context = (showTerm term) ++ " : " ++ (showType term context)
 
 -- -- Ejemplos:
 
