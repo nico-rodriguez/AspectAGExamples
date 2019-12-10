@@ -157,9 +157,9 @@ $(mkSemFunc ''Nt_Term)
 
 evalTerm term context = sem_Term asp_all term ( (ctx =. context) .*. (ctx_var =. (Data.Set.empty::ContextTypes)) .*. emptyAtt ) #. eval
 
-showTerm term context = (sem_Term asp_sshow term emptyAtt #. sshow)
+showTerm term = (sem_Term asp_sshow term emptyAtt #. sshow)
 showType term context = sem_Ty asp_type_sshow (evalTerm term context) emptyAtt #. sshow
-showTermAndType term context = (showTerm term context) ++ " : " ++ (showType term context)
+showTermAndType term context = (showTerm term) ++ " : " ++ (showType term context)
 
 -- Ejemplos:
 
