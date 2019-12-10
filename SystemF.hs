@@ -157,3 +157,6 @@ eval_term6 = evalTerm term6 (Data.Map.empty)
 
 term7 = TyAbs "alfa" (Abs "x" (VarTy "alfa") (Var "x"))
 eval_term7 = evalTerm term7 (Data.Map.empty)
+
+term8 = TyApp term7 (ConstTy I)
+eval_term8 = evalTerm term8 (Data.Map.empty)
