@@ -21,7 +21,6 @@ import Data.Maybe (fromJust)
 import Language.Grammars.AspectAG
 import Language.Grammars.AspectAG.TH
 import Prelude (String, ($), (<*>), (<$>), Eq, Read, Show, show, (++), error, (==))
-import GHC.Unicode
 
 -- Modelar el cálculo lambda polimórifco (System F).
 -- Lenguaje de términos:
