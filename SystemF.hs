@@ -86,11 +86,7 @@ eval_abs = syndefM eval p_Abs (AppTy <$> at ch_absVarType eval <*> at ch_absExpr
 eval_app = syndefM eval p_App (reduceApp <$> at ch_appFun eval <*> at ch_appArg eval)
   where reduceApp (AppTy argTy resTy) argTy2 = if argTy == argTy2 then resTy else error $ "El tipo " ++ show argTy ++ " no coincide con " ++ show argTy2
         reduceApp tyFun           tyArg      = error $ "Tipo inválido " ++ show tyFun ++ " en la aplicación a " ++ show tyArg
-eval_tyAbs = syndefM eval p_TyAbs (UnivTy <$> ter ch_tyAbsTyVar <*> at ch_tyAbsTerm eval)-- <*> at lhs ctx_var)
-  -- where univTy tyAbsTyVar tyAbsTermTy ctx_Var =
-  --         if Data.Set.member tyAbsTyVar ctx_Var
-  --         then UnivTy tyAbsTyVar tyAbsTermTy
-  --         else error $ "La variable de tipo " ++ show tyAbsTyVar ++ " no se encuentra en el contexto " ++ show ctx_Var
+eval_tyAbs = syndefM eval p_TyAbs (UnivTy <$> ter ch_tyAbsTyVar <*> at ch_tyAbsTerm eval)
 eval_tyApp = syndefM eval p_TyApp (replace <$> at ch_tyAppTerm eval <*> at ch_tyAppTy eval)
   where replace (UnivTy tyVar ty) ty2 = replace' ty tyVar ty2
         replace _                 _   = error $ "Tipo inválido para la abstracción de tipo"
@@ -100,11 +96,11 @@ eval_tyApp = syndefM eval p_TyApp (replace <$> at ch_tyAppTerm eval <*> at ch_ty
         replace' t@(ConstTy _)        _     _   = t
 
 eval_constTy = syndefM eval p_ConstTy (ConstTy <$> ter ch_constTy)
-eval_varTy   = syndefM eval p_VarTy (VarTy <$> ter ch_varTy)
-  -- where checkVarTy varTy ctx_Var =
-  --         if Data.Set.member varTy ctx_Var
-  --         then VarTy varTy
-  --         else error $ "La variable de tipo " ++ show varTy ++ " no se encuentra en el contexto " ++ show ctx_Var
+eval_varTy   = syndefM eval p_VarTy (checkVarTy <$> ter ch_varTy <*> at lhs ctx_var)
+  where checkVarTy varTy ctx_Var =
+          if Data.Set.member varTy ctx_Var
+          then VarTy varTy
+          else error $ "La variable de tipo " ++ show varTy ++ " no se encuentra en el contexto " ++ show ctx_Var
 eval_appTy   = syndefM eval p_AppTy (AppTy <$> at ch_appArgTy eval <*> at ch_appResTy eval)
 eval_univTy  = syndefM eval p_UnivTy (UnivTy <$> ter ch_univTyVar <*> at ch_univTyTy eval)
 asp_eval = eval_var .+: eval_abs .+: eval_app .+: eval_tyAbs .+: eval_tyApp .+: eval_constTy .+: eval_varTy .+: eval_appTy .+: eval_univTy .+: emptyAspect
@@ -117,11 +113,18 @@ ctx_tyApp  = inhdefM ctx p_TyApp ch_tyAppTerm (at lhs ctx)
 asp_ctx = ctx_abs .+: ctx_appFun .+: ctx_appArg .+: ctx_tyAbs .+: ctx_tyApp .+: emptyAspect
 
 ctx_var_abs    = inhdefM ctx_var p_Abs ch_absExpr (at lhs ctx_var)
+ctx_var_absVarType = inhdefM ctx_var p_Abs ch_absVarType (at lhs ctx_var)
 ctx_var_appFun = inhdefM ctx_var p_App ch_appFun (at lhs ctx_var)
 ctx_var_appArg = inhdefM ctx_var p_App ch_appArg (at lhs ctx_var)
 ctx_var_tyAbs  = inhdefM ctx_var p_TyAbs ch_tyAbsTerm (Data.Set.insert <$> ter ch_tyAbsTyVar <*> at lhs ctx_var)
 ctx_var_tyApp  = inhdefM ctx_var p_TyApp ch_tyAppTerm (at lhs ctx_var)
-asp_ctx_var = ctx_var_abs .+: ctx_var_appFun .+: ctx_var_appArg .+: ctx_var_tyAbs .+: ctx_var_tyApp .+: emptyAspect
+ctx_var_tyAppTy = inhdefM ctx_var p_TyApp ch_tyAppTy (at lhs ctx_var)
+
+ctx_var_appArgTy  = inhdefM ctx_var p_AppTy ch_appArgTy (at lhs ctx_var)
+ctx_var_appResTy  = inhdefM ctx_var p_AppTy ch_appResTy (at lhs ctx_var)
+ctx_var_univTyTy  = inhdefM ctx_var p_UnivTy ch_univTyTy (at lhs ctx_var)
+asp_ctx_var = ctx_var_abs .+: ctx_var_absVarType .+: ctx_var_appFun .+: ctx_var_appArg .+: ctx_var_tyAbs .+: ctx_var_tyApp .+: ctx_var_tyAppTy .+:
+  ctx_var_appArgTy .+: ctx_var_appResTy .+: ctx_var_univTyTy .+: emptyAspect
 
 asp_all = asp_eval .:+: asp_ctx_var .:+: asp_ctx
 
@@ -151,3 +154,6 @@ eval_term5 = evalTerm term5 context
 
 term6 = TyAbs "alfa" (Abs "x" (VarTy "beta") (Var "x"))
 eval_term6 = evalTerm term6 (Data.Map.empty)
+
+term7 = TyAbs "alfa" (Abs "x" (VarTy "alfa") (Var "x"))
+eval_term7 = evalTerm term7 (Data.Map.empty)
