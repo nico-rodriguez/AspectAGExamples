@@ -96,7 +96,10 @@ sshow_EmptyDef    = syndefM sshow p_EmptyDef $ pure ""
 sshow_ConsDef     = syndefM sshow p_ConsDef $ showConsDef <$> ter ch_varName <*> (show <$> ter ch_varType) <*> at ch_tailDefList sshow
   where showConsDef n t d = n ++ " : " ++ t ++ ";\n" ++ d
 sshow_Defs        = syndefM sshow p_Defs $ showDefs <$> at ch_defList sshow
-  where showDefs dl = "Var " ++ dl
+  where
+    showDefs dl@ConsDef{} = "Var " ++ dl
+    showDefs EmptyDef     = "Var\n"
+
 sshow_ConsStmt    = syndefM sshow p_ConsStmt $ showConsStmt <$> at ch_headStmt sshow <*> at ch_tailStmtList sshow
   where showConsStmt h t = h ++ t
 sshow_EmptyStmt  = syndefM sshow p_EmptyStmt $ pure ""
