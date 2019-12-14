@@ -14,6 +14,14 @@
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
+{-# OPTIONS_GHC -O0 #-}
+{-# OPTIONS_GHC +RTS #-}
+{-# OPTIONS_GHC -A128m #-}
+{-# OPTIONS_GHC -n8m #-}
+{-# OPTIONS_GHC -s #-}
+{-# OPTIONS_GHC -RTS #-}
+{-# OPTIONS_GHC -j2 #-}
+
 
 module MicroPascal.Syntax where
 
