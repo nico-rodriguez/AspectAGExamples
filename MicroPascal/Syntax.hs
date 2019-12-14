@@ -56,7 +56,7 @@ $(addProd "Defs" ''Nt_Defs [("defList", NonTer ''Nt_DefList)])
 
 $(addProd "ConsStmt"    ''Nt_StmtList [("headStmt", NonTer ''Nt_Stmt),
                                        ("tailStmtList", NonTer ''Nt_StmtList)])
-$(addProd "SingleStmt"  ''Nt_StmtList [("stmtLast", NonTer ''Nt_Stmt)] )
+$(addProd "EmptyStmt"  ''Nt_StmtList [] )
 $(addProd "Body" ''Nt_Body [("bodyStmts", NonTer ''Nt_StmtList)])
 
 
@@ -91,16 +91,15 @@ $(mkSemFuncs [''Nt_Program, ''Nt_Body, ''Nt_StmtList,
 $(attLabel "sshow" ''String)
 
 sshow_Program     = syndefM sshow p_Program $ showProgram <$> ter ch_programName <*> at ch_programDefs sshow <*> at ch_programBody sshow
-  where showProgram n d b = "Program " ++ n ++ ";\n" ++ d ++ "\n" ++ b
+  where showProgram n d b = "Program " ++ n ++ ";\n" ++ d ++ b
 sshow_EmptyDef    = syndefM sshow p_EmptyDef $ pure ""
 sshow_ConsDef     = syndefM sshow p_ConsDef $ showConsDef <$> ter ch_varName <*> (show <$> ter ch_varType) <*> at ch_tailDefList sshow
   where showConsDef n t d = n ++ " : " ++ t ++ ";\n" ++ d
 sshow_Defs        = syndefM sshow p_Defs $ showDefs <$> at ch_defList sshow
-  where showDefs dl = "Var\n" ++ dl
+  where showDefs dl = "Var " ++ dl
 sshow_ConsStmt    = syndefM sshow p_ConsStmt $ showConsStmt <$> at ch_headStmt sshow <*> at ch_tailStmtList sshow
-  where showConsStmt h t = h ++ ";\n" ++ t
-sshow_SingleStmt  = syndefM sshow p_SingleStmt $ showSingleStmt <$> at ch_stmtLast sshow
-  where showSingleStmt s = s ++ ";\n"
+  where showConsStmt h t = h ++ t
+sshow_EmptyStmt  = syndefM sshow p_EmptyStmt $ pure ""
 sshow_Body        = syndefM sshow p_Body $ showBody <$> at ch_bodyStmts sshow
   where showBody b = "Begin\n" ++ b ++ "End.\n"
 sshow_Assign      = syndefM sshow p_Assign $ showAssign <$> ter ch_assignName <*> at ch_assignExpr sshow
@@ -122,10 +121,20 @@ sshow_UOpExpr     = syndefM sshow p_UOpExpr $ wrap <$> (show <$> ter ch_uop) <*>
   where wrap op e = "(" ++ op ++ " " ++ e ++ ")"
 
 asp_sshow = sshow_Program .+: sshow_EmptyDef .+: sshow_ConsDef .+: sshow_Defs .+:
-  sshow_ConsStmt .+: sshow_SingleStmt .+: sshow_Body .+: sshow_Assign .+: sshow_If .+: sshow_While .+: sshow_WriteLn .+: sshow_ReadLn .+:
+  sshow_ConsStmt .+: sshow_EmptyStmt .+: sshow_Body .+: sshow_Assign .+: sshow_If .+: sshow_While .+: sshow_WriteLn .+: sshow_ReadLn .+:
   sshow_Var .+: sshow_Bool .+: sshow_NatL .+: sshow_BOpExpr .+: sshow_UOpExpr .+: emptyAspect
 
-showProgram :: Program -> String
-showProgram p = (sem_Program asp_sshow p EmptyAtt) #. sshow
+showProgram :: Program -> IO ()
+showProgram p = putStr $ (sem_Program asp_sshow p EmptyAtt) #. sshow
 
--- test = 
+prog1 = Program "ejemplo1" (Defs EmptyDef) (Body EmptyStmt)
+prog2 = Program "ejemplo2" (Defs (ConsDef "x" TInt (Defs (ConsDef "y" TInt (Defs (ConsDef "b" TBool (Defs EmptyDef)))))))
+  (Body (ConsStmt (Assign "x" (NatL 10)) (
+    ConsStmt (Assign "y" (BOpExpr (Var "x") OTimes (BOpExpr (NatL 3) OPlus (NatL 2)))) (
+      ConsStmt (Assign "b" (Bool True)) (
+        ConsStmt (Assign "b" (UOpExpr ONot (BOpExpr (Var "x") OLT (NatL 10))))
+          EmptyStmt
+        )
+      )
+    )
+  ))
