@@ -97,54 +97,33 @@ $(mkSemFuncs [''Nt_Program, ''Nt_Body, ''Nt_StmtList,
 
 -- Example: pretty printing expressions
 
-$(attLabels [("sshow", ''B.ByteString), ("indent", ''Int)])
-
-indent_programDefs  = inhdefM indent p_Program ch_programDefs $ pure 0
-indent_programBody  = inhdefM indent p_Program ch_programBody $ pure 1
-
-indent_tailDefList  = inhdefM indent p_ConsDef ch_tailDefList $ at lhs indent
-indent_defList      = inhdefM indent p_Defs ch_defList $ at lhs indent
-
-indent_headStmt     = inhdefM indent p_ConsStmt ch_headStmt $ at lhs indent
-indent_tailStmtList = inhdefM indent p_ConsStmt ch_tailStmtList $ at lhs indent
-
-indent_bodyStmts    = inhdefM indent p_Body ch_bodyStmts $ (+1) <$> at lhs indent
-indent_ifThen       = inhdefM indent p_If ch_ifThen $ (+1) <$> at lhs indent
-indent_ifElse       = inhdefM indent p_If ch_ifElse $ (+1) <$> at lhs indent
-indent_whileDo      = inhdefM indent p_While ch_whileDo $ (+1) <$> at lhs indent
-
-asp_indent = indent_programDefs .+: indent_programBody .+: indent_tailDefList .+: indent_defList .+: indent_headStmt .+:
-  indent_tailStmtList .+: indent_bodyStmts .+: indent_ifThen .+: indent_ifElse .+: indent_whileDo .+: emptyAspect
-
-
-repeatTabs :: Int -> B.ByteString
-repeatTabs i = B.replicate i "\t"
+$(attLabel "sshow" ''B.ByteString)
 
 sshow_Program     = syndefM sshow p_Program $ showProgram <$> ter ch_programName <*> at ch_programDefs sshow <*> at ch_programBody sshow
   where showProgram n d b = B.concat [B.pack "Program ", n, a, B.pack ";\n", d, b]
 sshow_EmptyDef    = syndefM sshow p_EmptyDef $ pure B.empty
-sshow_ConsDef     = syndefM sshow p_ConsDef $ showConsDef <$> ter ch_varName <*> (show <$> ter ch_varType) <*> at ch_tailDefList sshow <*> at lhs indent
-  where showConsDef n t d i = B.concat [repeatTabs i, n, B.pack " : ", t, B.pack ";\n", d]
+sshow_ConsDef     = syndefM sshow p_ConsDef $ showConsDef <$> ter ch_varName <*> (show <$> ter ch_varType) <*> at ch_tailDefList sshow
+  where showConsDef n t d = B.concat [n, B.pack " : ", t, B.pack ";\n", d]
 sshow_Defs        = syndefM sshow p_Defs $ showDefs <$> at ch_defList sshow
   where
     showDefs dl@ConsDef{} = B.append (B.pack "Var ") dl
     showDefs EmptyDef     = B.pack "Var\n"
 
-sshow_ConsStmt    = syndefM sshow p_ConsStmt $ showConsStmt <$> at ch_headStmt sshow <*> at ch_tailStmtList sshow <*> at lhs indent
-  where showConsStmt h t i = B.concat [repeatTabs i, h, t]
+sshow_ConsStmt    = syndefM sshow p_ConsStmt $ showConsStmt <$> at ch_headStmt sshow <*> at ch_tailStmtList sshow
+  where showConsStmt h t = B.append h t
 sshow_EmptyStmt  = syndefM sshow p_EmptyStmt $ pure B.empty
 sshow_Body        = syndefM sshow p_Body $ showBody <$> at ch_bodyStmts sshow
   where showBody b = B.concat [B.pack "Begin\n", b, B.pack "End.\n"]
-sshow_Assign      = syndefM sshow p_Assign $ showAssign <$> ter ch_assignName <*> at ch_assignExpr sshow <*> at lhs indent
-  where showAssign n e i = B.concat [repeatTabs i, n, B.pack " := ", e, B.pack ";\n"]
+sshow_Assign      = syndefM sshow p_Assign $ showAssign <$> ter ch_assignName <*> at ch_assignExpr sshow
+  where showAssign n e = B.concat [n, B.pack " := ", e, B.pack ";\n"]
 sshow_If          = syndefM sshow p_If $ showIf <$> at ch_ifCond sshow <*> at ch_ifThen sshow <*> at ch_ifElse sshow
   where showIf c t e = B.concat [B.pack "If ", c, B.pack " then \nbegin\n", t, B.pack "end\nelse\nbegin\n", e, B.pack "end\n"]
 sshow_While       = syndefM sshow p_While $ showWhile <$> at ch_whileCond sshow <*> at ch_whileDo sshow
   where showWhile c b = B.concat [B.pack "While ", c, B.pack " do\nbegin", b, B.pack "end\n"]
-sshow_WriteLn     = syndefM sshow p_WriteLn $ showwriteLn <$> at ch_writeLnExpr sshow <*> at lhs indent
-  where showwriteLn e i = B.concat [repeatTabs i, B.pack "WriteLn ", e, B.pack ";\n"]
-sshow_ReadLn      = syndefM sshow p_ReadLn $ showReadLn <$> ter ch_readLnName <*> at lhs indent
-  where showReadLn n i = B.concat [repeatTabs i, B.pack "ReadLn ", n, B.pack ";\n"]
+sshow_WriteLn     = syndefM sshow p_WriteLn $ showwriteLn <$> at ch_writeLnExpr sshow
+  where showwriteLn e = B.concat [B.pack "WriteLn ", e, B.pack ";\n"]
+sshow_ReadLn      = syndefM sshow p_ReadLn $ showReadLn <$> ter ch_readLnName
+  where showReadLn n = B.concat [B.pack "ReadLn ", n, B.pack ";\n"]
 sshow_Var         = syndefM sshow p_Var  $ B.pack (ter ch_litName)
 sshow_Bool        = syndefM sshow p_Bool $ B.pack . show <$> ter ch_litBool
 sshow_NatL        = syndefM sshow p_NatL $ B.pack . show <$> ter ch_litNat
@@ -157,10 +136,8 @@ asp_sshow = sshow_Program .+: sshow_EmptyDef .+: sshow_ConsDef .+: sshow_Defs .+
   sshow_ConsStmt .+: sshow_EmptyStmt .+: sshow_Body .+: sshow_Assign .+: sshow_If .+: sshow_While .+: sshow_WriteLn .+: sshow_ReadLn .+:
   sshow_Var .+: sshow_Bool .+: sshow_NatL .+: sshow_BOpExpr .+: sshow_UOpExpr .+: emptyAspect
 
-asp_sshow_indent = asp_sshow .:+: asp_indent
-
 showProgram :: Program -> IO ()
-showProgram p = B.putStr $ (sem_Program asp_sshow_indent p EmptyAtt) #. sshow
+showProgram p = B.putStr $ (sem_Program asp_sshow p EmptyAtt) #. sshow
 
 prog1 = Program "ejemplo1" (Defs EmptyDef) (Body EmptyStmt)
 prog2 = Program "ejemplo2" (Defs (ConsDef "x" TInt (Defs (ConsDef "y" TInt (Defs (ConsDef "b" TBool (Defs EmptyDef)))))))
