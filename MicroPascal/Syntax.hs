@@ -26,8 +26,6 @@
 module MicroPascal.Syntax where
 
 
-import qualified Data.Text as T
-import Data.Text.IO (putStr)
 import Language.Grammars.AspectAG
 import Language.Grammars.AspectAG.TH
 
@@ -98,47 +96,47 @@ $(mkSemFuncs [''Nt_Program, ''Nt_Body, ''Nt_StmtList,
 
 -- Example: pretty printing expressions
 
-$(attLabel "sshow" ''T.Text)
+$(attLabel "sshow" ''String)
 
 sshow_Program     = syndefM sshow p_Program $ showProgram <$> ter ch_programName <*> at ch_programDefs sshow <*> at ch_programBody sshow
-  where showProgram n d b = T.concat [T.pack "Program ", n, a, T.pack ";\n", d, b]
-sshow_EmptyDef    = syndefM sshow p_EmptyDef $ pure T.empty
+  where showProgram n d b = "Program " ++ n ++ a ++ ";\n" ++ d ++ b
+sshow_EmptyDef    = syndefM sshow p_EmptyDef $ pure ""
 sshow_ConsDef     = syndefM sshow p_ConsDef $ showConsDef <$> ter ch_varName <*> (show <$> ter ch_varType) <*> at ch_tailDefList sshow
-  where showConsDef n t d = T.concat [n, T.pack " : ", t, T.pack ";\n", d]
+  where showConsDef n t d = n ++ " : " ++ t ++ ";\n" ++ d
 sshow_Defs        = syndefM sshow p_Defs $ showDefs <$> at ch_defList sshow
   where
-    showDefs dl@ConsDef{} = T.append (T.pack "Var ") dl
-    showDefs EmptyDef     = T.pack "Var\n"
+    showDefs dl@ConsDef{} = "Var " ++ dl
+    showDefs EmptyDef     = "Var\n"
 
 sshow_ConsStmt    = syndefM sshow p_ConsStmt $ showConsStmt <$> at ch_headStmt sshow <*> at ch_tailStmtList sshow
-  where showConsStmt h t = T.append h t
-sshow_EmptyStmt  = syndefM sshow p_EmptyStmt $ pure T.empty
+  where showConsStmt h t = h ++ t
+sshow_EmptyStmt  = syndefM sshow p_EmptyStmt $ pure ""
 sshow_Body        = syndefM sshow p_Body $ showBody <$> at ch_bodyStmts sshow
-  where showBody b = T.concat [T.pack "Begin\n", b, T.pack "End.\n"]
+  where showBody b = "Begin\n" ++ b ++ "End.\n"
 sshow_Assign      = syndefM sshow p_Assign $ showAssign <$> ter ch_assignName <*> at ch_assignExpr sshow
-  where showAssign n e = T.concat [n, T.pack " := ", e, T.pack ";\n"]
+  where showAssign n e = n ++ " := " ++ e ++ ";\n"
 sshow_If          = syndefM sshow p_If $ showIf <$> at ch_ifCond sshow <*> at ch_ifThen sshow <*> at ch_ifElse sshow
-  where showIf c t e = T.concat [T.pack "If ", c, T.pack " then \nbegin\n", t, T.pack "end\nelse\nbegin\n", e, T.pack "end\n"]
+  where showIf c t e = "If " ++ c ++ " then \nbegin\n" ++ t ++ "end\nelse\nbegin\n" ++ e ++ "end\n"
 sshow_While       = syndefM sshow p_While $ showWhile <$> at ch_whileCond sshow <*> at ch_whileDo sshow
-  where showWhile c b = T.concat [T.pack "While ", c, T.pack " do\nbegin", b, T.pack "end\n"]
+  where showWhile c b = "While " ++ c ++ " do\nbegin" ++ b ++ "end\n"
 sshow_WriteLn     = syndefM sshow p_WriteLn $ showwriteLn <$> at ch_writeLnExpr sshow
-  where showwriteLn e = T.concat [T.pack "WriteLn ", e, T.pack ";\n"]
+  where showwriteLn e = "WriteLn " ++ e ++ ";\n"
 sshow_ReadLn      = syndefM sshow p_ReadLn $ showReadLn <$> ter ch_readLnName
-  where showReadLn n = T.concat [T.pack "ReadLn ", n, T.pack ";\n"]
-sshow_Var         = syndefM sshow p_Var  $ T.pack (ter ch_litName)
-sshow_Bool        = syndefM sshow p_Bool $ T.pack . show <$> ter ch_litBool
-sshow_NatL        = syndefM sshow p_NatL $ T.pack . show <$> ter ch_litNat
-sshow_BOpExpr     = syndefM sshow p_BOpExpr $ wrap <$> at ch_l sshow <*> (T.pack . show <$> ter ch_bop) <*> at ch_r sshow
-  where wrap l op r = T.concat [T.pack "(", l, T.pack " ", op, T.pack " ", r, T.pack ")"]
-sshow_UOpExpr     = syndefM sshow p_UOpExpr $ wrap <$> (T.pack . show <$> ter ch_uop) <*> at ch_e sshow
-  where wrap op e = T.concat [T.pack "(", op, T.pack " ", e, T.pack ")"]
+  where showReadLn n = "ReadLn " ++ n ++ ";\n"
+sshow_Var         = syndefM sshow p_Var  $ (ter ch_litName)
+sshow_Bool        = syndefM sshow p_Bool $ show <$> ter ch_litBool
+sshow_NatL        = syndefM sshow p_NatL $ show <$> ter ch_litNat
+sshow_BOpExpr     = syndefM sshow p_BOpExpr $ wrap <$> at ch_l sshow <*> (show <$> ter ch_bop) <*> at ch_r sshow
+  where wrap l op r = "(" ++ l ++ " " ++ op ++ " " ++ r ++ ")"
+sshow_UOpExpr     = syndefM sshow p_UOpExpr $ wrap <$> (show <$> ter ch_uop) <*> at ch_e sshow
+  where wrap op e = "(" ++ op ++ " " ++ e ++ ")"
 
 asp_sshow = sshow_Program .+: sshow_EmptyDef .+: sshow_ConsDef .+: sshow_Defs .+:
   sshow_ConsStmt .+: sshow_EmptyStmt .+: sshow_Body .+: sshow_Assign .+: sshow_If .+: sshow_While .+: sshow_WriteLn .+: sshow_ReadLn .+:
   sshow_Var .+: sshow_Bool .+: sshow_NatL .+: sshow_BOpExpr .+: sshow_UOpExpr .+: emptyAspect
 
 showProgram :: Program -> IO ()
-showProgram p = Data.Text.IO.putStr $ (sem_Program asp_sshow p EmptyAtt) #. sshow
+showProgram p = putStr $ (sem_Program asp_sshow p EmptyAtt) #. sshow
 
 prog1 = Program "ejemplo1" (Defs EmptyDef) (Body EmptyStmt)
 prog2 = Program "ejemplo2" (Defs (ConsDef "x" TInt (Defs (ConsDef "y" TInt (Defs (ConsDef "b" TBool (Defs EmptyDef)))))))
