@@ -33,8 +33,7 @@ $(attLabels [("defs", ''DeclVar), ("decls", ''DeclVar), ("ty", ''Type)])
 defs_Program  = syndefM defs p_Program $ at ch_programDefs defs
 defs_Defs     = syndefM defs p_Defs $ at ch_defList defs
 defs_EmptyDef = syndefM defs p_EmptyDef $ pure (M.empty::DeclVar)
-defs_ConsDef  = syndefM defs p_ConsDef $ defsConsDef <$> ter ch_varName <*> ter ch_varType <*> at ch_tailDefList defs
-  where defsConsDef n t m = M.insert n t m
+defs_ConsDef  = syndefM defs p_ConsDef $ M.insert <$> ter ch_varName <*> ter ch_varType <*> at ch_tailDefList defs
 
 asp_defs = defs_Program .+: defs_Defs .+: defs_EmptyDef .+: defs_ConsDef .+: emptyAspect
 
